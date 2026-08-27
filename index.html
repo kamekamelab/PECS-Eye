@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#ffffff" />
+<title>PECS Eye</title>
+<style>
+:root{--bg:#f7f8fb;--panel:#fff;--ink:#172033;--muted:#667085;--line:#d9deea;--accent:#2563eb;--ok:#15803d;--danger:#b42318;--card:160px;--gap:18px;--radius:22px}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+button,input,select{font:inherit} button{cursor:pointer}
+.app{max-width:1400px;margin:auto;padding:14px;min-height:100vh;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.title{font-size:clamp(24px,3vw,36px);font-weight:900;margin-right:auto}.pill{border:2px solid var(--line);background:#fff;border-radius:999px;padding:10px 14px;font-weight:800}
+.sentence{background:var(--panel);border:3px solid var(--line);border-radius:var(--radius);padding:14px;min-height:126px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;box-shadow:0 4px 16px #0000000c}.sentence-cards{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.sentence-card{display:flex;align-items:center;gap:8px;padding:8px 12px;border:2px solid var(--line);border-radius:16px;background:#fff;font-weight:900;font-size:22px}.sentence-card img{width:52px;height:52px;border-radius:12px;object-fit:cover}.sentence-card .emoji{font-size:38px}.speak{border:0;border-radius:20px;background:var(--ok);color:#fff;padding:18px 22px;font-size:26px;font-weight:900;min-width:170px;min-height:78px}.speak:active{transform:scale(.98)}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.toolbar button,.toolbar select{border:2px solid var(--line);background:#fff;border-radius:14px;padding:10px 14px;font-weight:800}.toolbar .danger{color:var(--danger)}
+.board{background:#fff;border:3px solid var(--line);border-radius:var(--radius);padding:18px;overflow:auto;min-height:360px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--card),1fr));gap:var(--gap);align-content:start}.card{position:relative;min-height:190px;border:4px solid #cfd6e5;border-radius:22px;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:14px;text-align:center;box-shadow:0 4px 12px #0000000d;overflow:hidden;user-select:none;-webkit-user-select:none}.card:hover,.card.gaze{border-color:var(--accent);transform:translateY(-2px)}.card.selected{border-color:var(--ok)}.card img{width:100%;height:110px;object-fit:cover;border-radius:14px}.card .emoji{font-size:74px;line-height:1}.card .label{font-size:clamp(24px,3vw,34px);font-weight:900;line-height:1.2}.dwell-ring{position:absolute;inset:6px;border-radius:18px;pointer-events:none;background:conic-gradient(var(--accent) var(--p,0%),transparent 0);opacity:0;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-mask-composite:xor;padding:7px}.card.gaze .dwell-ring{opacity:1}
+.status{display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:14px;padding:0 4px}.dot{width:11px;height:11px;border-radius:50%;background:#98a2b3}.dot.on{background:#16a34a}
+.modal{position:fixed;inset:0;background:#0008;display:none;place-items:center;padding:14px;z-index:50}.modal.open{display:grid}.dialog{width:min(900px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:20px}.dialog h2{margin-top:0}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.field label{font-weight:800}.field input,.field select{border:2px solid var(--line);border-radius:12px;padding:11px}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}.actions button{border:0;border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:var(--accent);color:#fff}.secondary{background:#eef2ff}.webcam-video{position:fixed;right:12px;bottom:12px;width:150px;height:110px;object-fit:cover;border:3px solid white;border-radius:14px;box-shadow:0 5px 20px #0004;z-index:40;display:none}
+@media(max-width:720px){:root{--card:135px;--gap:12px}.app{padding:8px}.sentence{grid-template-columns:1fr}.speak{width:100%}.row{grid-template-columns:1fr}.card{min-height:170px}.card .emoji{font-size:62px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.card:hover,.card.gaze{transform:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="title">👀 PECS Eye</div>
+    <button class="pill" id="modeBtn">操作：タッチ／ポインタ</button>
+    <button class="pill" id="settingsBtn">⚙️ 先生用設定</button>
+  </header>
+
+  <section class="sentence" aria-label="できたことば">
+    <div>
+      <div style="font-weight:900;color:#667085;margin-bottom:8px">できた ことば</div>
+      <div id="sentenceCards" class="sentence-cards"></div>
+    </div>
+    <button id="speakBtn" class="speak">🔊 つたえる</button>
+  </section>
+
+  <main>
+    <div class="toolbar">
+      <select id="categorySelect" aria-label="カテゴリー"></select>
+      <button id="starterBtn">「わたしは」を入れる</button>
+      <button id="wantBtn">「ほしい」を入れる</button>
+      <button id="undoBtn">↩ 1つもどす</button>
+      <button id="clearBtn" class="danger">🗑 ぜんぶ消す</button>
+    </div>
+    <section class="board" aria-live="polite"><div class="grid" id="cardGrid"></div></section>
+  </main>
+
+  <footer class="status">
+    <span class="dot" id="gazeDot"></span><span id="statusText">タッチ・マウス・外部視線装置で使えます。</span>
+    <span>視線決定：<b id="dwellText">1.2秒</b></span>
+  </footer>
+</div>
+
+<div class="modal" id="settingsModal" role="dialog" aria-modal="true">
+  <div class="dialog">
+    <h2>先生用設定</h2>
+    <div class="row">
+      <div class="field"><label>視線で決定する時間</label><select id="dwellSelect"><option value="500">0.5秒</option><option value="800">0.8秒</option><option value="1200">1.2秒</option><option value="1800">1.8秒</option><option value="2500">2.5秒</option><option value="3000">3.0秒</option></select></div>
+      <div class="field"><label>カードの大きさ</label><select id="sizeSelect"><option value="130">小</option><option value="160">標準</option><option value="200">大</option><option value="240">特大</option></select></div>
+    </div>
+    <hr style="border:0;border-top:2px solid #eee;margin:18px 0">
+    <h3>カードを追加</h3>
+    <div class="row">
+      <div class="field"><label>カード名</label><input id="newLabel" placeholder="例：ジュース"></div>
+      <div class="field"><label>読み上げる言葉</label><input id="newSpeech" placeholder="例：ジュース"></div>
+      <div class="field"><label>絵文字（画像がない時）</label><input id="newEmoji" placeholder="🥤"></div>
+      <div class="field"><label>カテゴリー</label><input id="newCategory" placeholder="例：のみもの"></div>
+    </div>
+    <div class="field"><label>写真・絵カード画像（任意）</label><input id="newImage" type="file" accept="image/*" capture="environment"><small>この端末のブラウザー内に保存します。</small></div>
+    <div class="actions"><button class="secondary" id="resetCardsBtn">初期カードに戻す</button><button class="primary" id="addCardBtn">＋カード追加</button></div>
+    <hr style="border:0;border-top:2px solid #eee;margin:18px 0">
+    <h3>視線入力</h3>
+    <p>外部視線装置がマウスポインタを動かせる場合は、そのまま「視線決定」を使えます。Webカメラ推定は試験機能で、専用装置ほど正確ではありません。</p>
+    <div class="actions"><button class="secondary" id="webcamBtn">📷 Webカメラ視線を試す</button><button class="secondary" id="stopWebcamBtn">停止</button></div>
+    <hr style="border:0;border-top:2px solid #eee;margin:18px 0">
+    <div class="actions"><button class="primary" id="closeSettingsBtn">閉じる</button></div>
+  </div>
+</div>
+<video id="webcamPreview" class="webcam-video" muted autoplay playsinline></video>
+
+<script>
+const DEFAULT_CARDS=[
+ {id:'juice',label:'ジュース',speech:'ジュース',emoji:'🥤',category:'のみもの'},
+ {id:'tea',label:'おちゃ',speech:'おちゃ',emoji:'🍵',category:'のみもの'},
+ {id:'water',label:'みず',speech:'みず',emoji:'💧',category:'のみもの'},
+ {id:'apple',label:'りんご',speech:'りんご',emoji:'🍎',category:'たべもの'},
+ {id:'banana',label:'バナナ',speech:'バナナ',emoji:'🍌',category:'たべもの'},
+ {id:'cookie',label:'おかし',speech:'おかし',emoji:'🍪',category:'たべもの'},
+ {id:'music',label:'おんがく',speech:'おんがく',emoji:'🎵',category:'かつどう'},
+ {id:'outside',label:'そと',speech:'そとに いきたい',emoji:'🌳',category:'かつどう'},
+ {id:'again',label:'もう1かい',speech:'もう いっかい',emoji:'🔁',category:'きもち・要求'},
+ {id:'help',label:'てつだって',speech:'てつだって ください',emoji:'🙋',category:'きもち・要求'},
+ {id:'finish',label:'おわり',speech:'おわり',emoji:'🏁',category:'きもち・要求'},
+ {id:'no',label:'いや',speech:'いやです',emoji:'✋',category:'きもち・要求'}
+];
+let cards=load('pecsEyeCards',DEFAULT_CARDS); let sentence=[]; let dwellMs=+load('pecsEyeDwell',1200); let cardSize=+load('pecsEyeSize',160);
+let dwellTarget=null,dwellStart=0,dwellTimer=null; let webcamActive=false;
+const $=s=>document.querySelector(s);
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))} function load(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function allCategories(){return ['すべて',...new Set(cards.map(c=>c.category||'そのほか'))]}
+function renderCategories(){const old=$('#categorySelect').value||'すべて'; $('#categorySelect').innerHTML=allCategories().map(c=>`<option>${esc(c)}</option>`).join(''); $('#categorySelect').value=allCategories().includes(old)?old:'すべて'}
+function renderCards(){document.documentElement.style.setProperty('--card',cardSize+'px'); const cat=$('#categorySelect').value||'すべて'; const list=cat==='すべて'?cards:cards.filter(c=>c.category===cat); $('#cardGrid').innerHTML=list.map(c=>`<button class="card gazeable" data-id="${esc(c.id)}" aria-label="${esc(c.label)}">${c.image?`<img src="${c.image}" alt="">`:`<div class="emoji">${esc(c.emoji||'🖼️')}</div>`}<div class="label">${esc(c.label)}</div><div class="dwell-ring"></div></button>`).join(''); bindGazeables()}
+function renderSentence(){const box=$('#sentenceCards'); if(!sentence.length){box.innerHTML='<span style="color:#98a2b3;font-size:22px;font-weight:800">カードを えらんでね</span>';return} box.innerHTML=sentence.map((x,i)=>`<button class="sentence-card" data-i="${i}" title="押すと削除">${x.image?`<img src="${x.image}" alt="">`:x.emoji?`<span class="emoji">${esc(x.emoji)}</span>`:''}<span>${esc(x.label)}</span></button>`).join(''); box.querySelectorAll('button').forEach(b=>b.onclick=()=>{sentence.splice(+b.dataset.i,1);renderSentence()})}
+function addToSentence(c){sentence.push({label:c.label,speech:c.speech||c.label,emoji:c.emoji||'',image:c.image||''});renderSentence(); flashStatus(`「${c.label}」を えらびました`)}
+function speak(){if(!sentence.length)return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(sentence.map(x=>x.speech||x.label).join(' '));u.lang='ja-JP';u.rate=.85;speechSynthesis.speak(u)}
+function flashStatus(t){$('#statusText').textContent=t;setTimeout(()=>{$('#statusText').textContent='タッチ・マウス・外部視線装置で使えます。'},1800)}
+function chooseById(id){const c=cards.find(x=>x.id===id);if(c)addToSentence(c)}
+function bindGazeables(){document.querySelectorAll('.gazeable').forEach(el=>{el.addEventListener('pointerenter',()=>startDwell(el));el.addEventListener('pointerleave',()=>cancelDwell(el));el.addEventListener('focus',()=>startDwell(el));el.addEventListener('blur',()=>cancelDwell(el));el.addEventListener('click',e=>{if(e.detail>0){cancelDwell(el);chooseById(el.dataset.id)}})})}
+function startDwell(el){if(dwellTarget===el)return;cancelDwell();dwellTarget=el;dwellStart=performance.now();el.classList.add('gaze');const ring=el.querySelector('.dwell-ring');dwellTimer=setInterval(()=>{const p=Math.min(100,(performance.now()-dwellStart)/dwellMs*100);if(ring)ring.style.setProperty('--p',p+'%');if(p>=100){const id=el.dataset.id;cancelDwell();chooseById(id)}},30)}
+function cancelDwell(el){if(dwellTimer)clearInterval(dwellTimer); if(dwellTarget){dwellTarget.classList.remove('gaze');const r=dwellTarget.querySelector('.dwell-ring');if(r)r.style.setProperty('--p','0%')}dwellTimer=null;dwellTarget=null}
+async function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+async function addCard(){const label=$('#newLabel').value.trim();if(!label){alert('カード名を入力してください');return}const f=$('#newImage').files[0];let image='';if(f)image=await fileToDataURL(f);cards.push({id:'c'+Date.now(),label,speech:$('#newSpeech').value.trim()||label,emoji:$('#newEmoji').value.trim()||'🖼️',category:$('#newCategory').value.trim()||'そのほか',image});save('pecsEyeCards',cards);['newLabel','newSpeech','newEmoji','newCategory'].forEach(id=>$('#'+id).value='');$('#newImage').value='';renderCategories();renderCards();alert('カードを追加しました')}
+async function startWebcam(){
+  if(webcamActive)return;
+  if(!navigator.mediaDevices?.getUserMedia){alert('このブラウザーではカメラを利用できません');return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    $('#webcamPreview').srcObject=stream;$('#webcamPreview').style.display='block';webcamActive=true;$('#gazeDot').classList.add('on');
+    $('#statusText').textContent='カメラ確認中。視線推定ライブラリを読み込みます…';
+    if(!window.webgazer){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://webgazer.cs.brown.edu/webgazer.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
+    stream.getTracks().forEach(t=>t.stop());$('#webcamPreview').srcObject=null;$('#webcamPreview').style.display='none';
+    await webgazer.setRegression('ridge').setGazeListener((data)=>{if(!data||!webcamActive)return; const el=document.elementFromPoint(data.x,data.y)?.closest('.gazeable');if(el!==dwellTarget){cancelDwell();if(el)startDwell(el)}}).begin();
+    webgazer.showVideoPreview(true).showPredictionPoints(true);
+    $('#statusText').textContent='Webカメラ視線モード：画面上の点を見ながらカードを選べます。';
+  }catch(e){console.error(e); webcamActive=false;$('#gazeDot').classList.remove('on');alert('Webカメラ視線を開始できませんでした。通信・カメラ許可・ブラウザー設定を確認してください。')}
+}
+function stopWebcam(){webcamActive=false;cancelDwell();$('#gazeDot').classList.remove('on');if(window.webgazer){try{webgazer.end()}catch{}}const s=$('#webcamPreview').srcObject;if(s)s.getTracks().forEach(t=>t.stop());$('#webcamPreview').srcObject=null;$('#webcamPreview').style.display='none';$('#statusText').textContent='タッチ・マウス・外部視線装置で使えます。'}
+$('#speakBtn').onclick=speak;$('#categorySelect').onchange=renderCards;$('#starterBtn').onclick=()=>{sentence.push({label:'わたしは',speech:'わたしは',emoji:'🙂'});renderSentence()};$('#wantBtn').onclick=()=>{sentence.push({label:'ほしい',speech:'ほしいです',emoji:'🙏'});renderSentence()};$('#undoBtn').onclick=()=>{sentence.pop();renderSentence()};$('#clearBtn').onclick=()=>{sentence=[];renderSentence()};
+$('#settingsBtn').onclick=()=>$('#settingsModal').classList.add('open');$('#closeSettingsBtn').onclick=()=>$('#settingsModal').classList.remove('open');$('#settingsModal').addEventListener('click',e=>{if(e.target===$('#settingsModal'))$('#settingsModal').classList.remove('open')});
+$('#dwellSelect').value=dwellMs;$('#sizeSelect').value=cardSize;$('#dwellSelect').onchange=e=>{dwellMs=+e.target.value;save('pecsEyeDwell',dwellMs);$('#dwellText').textContent=(dwellMs/1000).toFixed(1)+'秒'};$('#sizeSelect').onchange=e=>{cardSize=+e.target.value;save('pecsEyeSize',cardSize);renderCards()};
+$('#addCardBtn').onclick=addCard;$('#resetCardsBtn').onclick=()=>{if(confirm('追加したカードも消して、初期カードに戻しますか？')){cards=structuredClone(DEFAULT_CARDS);save('pecsEyeCards',cards);renderCategories();renderCards()}};$('#webcamBtn').onclick=startWebcam;$('#stopWebcamBtn').onclick=stopWebcam;
+$('#modeBtn').onclick=()=>alert('通常はタッチ・マウスで使えます。外部視線装置でポインタを動かせる場合は、カードを見続けると自動決定します。Webカメラ視線は「先生用設定」から試せます。');
+$('#dwellText').textContent=(dwellMs/1000).toFixed(1)+'秒';renderCategories();renderCards();renderSentence();
+</script>
+</body>
+</html>
