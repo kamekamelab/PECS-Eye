@@ -11,7 +11,7 @@
       el.id='freezeText';
       document.querySelector('.status')?.appendChild(el);
     }
-    el.textContent=modelFrozen?'学習：🔒固定':'学習：調整中';
+    el.textContent=modelFrozen?'学習：🔒固定':(cameraMode?'学習：調整中':'学習：待機');
   }
 
   function freezeTraining(){
@@ -32,6 +32,13 @@
     modelFrozen=false;ensureFreezeStatus();
     await stabilityBaseRunGazeGame();
     if(cameraMode&&correction?.valid)freezeTraining();
+  };
+
+  const stabilityBaseStopCamera=stopCamera;
+  stopCamera=async function(close=true){
+    const result=await stabilityBaseStopCamera(close);
+    modelFrozen=false;ensureFreezeStatus();
+    return result;
   };
 
   function removeQuickTarget(){
@@ -68,6 +75,8 @@
       return;
     }
     quickAdjusting=true;
+    let applied=false;
+    let finalStatus='かんたん再調整は反映していません';
     calibrating=true;calCollecting=false;calRaw=[];resetFilter();
     $('#settings')?.classList.remove('open');
     $('#cursor')?.classList.remove('on');
@@ -98,6 +107,7 @@
       $('#instruction').textContent='測定できませんでした';
       $('#calStatus').textContent='顔の位置を確認してください';
       $('#calhint').textContent='必要なら9点の再調整をしてください';
+      finalStatus='かんたん再調整：測定できませんでした';
       await sleep(1200);
     }else{
       const rawX=median(calRaw.map(v=>v.x)),rawY=median(calRaw.map(v=>v.y));
@@ -109,13 +119,16 @@
         $('#instruction').textContent='ずれが大きすぎます';
         $('#calStatus').textContent=Number.isFinite(error)?`${Math.round(error)}px`:'測定不可';
         $('#calhint').textContent='9点のみつめて再調整をしてください';
+        finalStatus='ずれが大きいため、9点の再調整がおすすめです';
         await sleep(1400);
       }else if(applyOffset(dx,dy)){
+        applied=true;
         t.classList.remove('recording');t.classList.add('good');
         t.querySelector('span:last-child').textContent='✨';
         $('#instruction').textContent='かんたん再調整 完了';
         $('#calStatus').textContent=`ずれを ${Math.round(error)}px 補正しました`;
         $('#calhint').textContent='9点調整の形は変えず、位置だけ合わせました';
+        finalStatus=`かんたん再調整を反映しました（${Math.round(error)}px）`;
         await sleep(900);
       }
     }
@@ -127,7 +140,7 @@
     $('#cursor')?.classList.add('on');
     $('#dot').className='dot on';
     freezeTraining();
-    $('#status').textContent='かんたん再調整を反映しました';
+    $('#status').textContent=finalStatus;
     quickAdjusting=false;
   }
 
